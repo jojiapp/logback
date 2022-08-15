@@ -9,6 +9,29 @@
 
 `spring-boot-starter-web`를 사용하면 기본적으로 `Logback Dependencies`가 받아집니다.
 
+## Logback 구성 요소
+
+### logback-core
+
+`logback-classic`와 `logback-access` 모듈을 위한 기반 역할을 하는 모듈입니다.
+
+`Appender`, `Layout` 인터페이스가 이 모듈에 속합니다.
+
+### logback-classic
+
+`logback-core`에서 확장된 모듈로 `logback-core`를 가지며 `Slf4j`를 구현합니다.
+
+`Logger` 클래스가 이 모듈에 속합니다.
+
+> `logback-classic`에 포함된 라이브러리들은 해당 `artifact`의 올바른 버전 사용이 필요하고, 모두 명시적으로 선언하는 것이 좋기 때문에
+> 이걸 사용할 때는 `exclude` 해주는 것이 좋다고 합니다.
+
+### logback-access
+
+`Servlet Container`와 통합하여 `HTTP 액세스`에 대한 로깅 기능을 제공합니다.
+
+> 웹 애플리케이션 레벨이 아닌 컨테이너 레벨에 설치되어야 합니다.
+
 ## 로그 레벨
 
 | Level   | 설명                                                   |
