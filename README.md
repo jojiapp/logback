@@ -32,7 +32,11 @@
 
 > 웹 애플리케이션 레벨이 아닌 컨테이너 레벨에 설치되어야 합니다.
 
-## 로그 레벨
+## Logback 설정 요소
+
+### Logger - 어떻게 기록할까?
+
+실제 로깅을 수행하는 구성요소 입니다.
 
 | Level   | 설명                                                   |
 |---------|------------------------------------------------------|
@@ -44,6 +48,29 @@
 | `Trace` | Debug 레벨보다 더 자세한 정보가 필요한 경우. Dev 환경에서 버그를 해결하기 위해 사용 |
 
 - `Logback`은 `Fatal`을 제외하고 5개의 레벨을 가집니다.
+
+> `Error` > `Warn` > `Info` > `Debug` > `Trace`
+>
+> 예를 들어 `Info` 레벨로 설정 시, `Debug`, `Trace` 레벨은 출력 되지 않습니다.
+
+### Appender - 어디에 기록할까?
+
+로그 메세지가 출력 될 대상을 결정합니다.
+
+`Logger`는 `Appender`에게 로그 이벤트를 `위임`합니다
+
+- `ConsoleAppender`: 콘솔에 출력
+- `FileAppender`: 파일에 출력
+- `RollingFileAppender`: 파일을 일정 조건에 맞게 따로 저장
+
+외에도 로그를 `메일로 보내는 Appender` 등 더 있지만,
+주로 사용 될 Appender는 위의 3개이므로 이외에 Appender는 필요시 찾아서 적용하면 될 것 같습니다.
+
+### Encoder(Layout) - 어떻게 출력할까?
+
+로그 이벤트를 바이트 배열로 변환하고 해당 바이트 배열을 `OutPutStream에 쓰는 작업을 담당`합니다.
+
+즉, `Appender`에 포함되며 `사용자가 지정한 형식으로 로그를 변환`하는 역할을 합니다.
 
 ## 로깅 해보기
 
@@ -95,52 +122,74 @@ logging.level.root='trace'
 `application.properties`은 간단하지만 세부적인 설정을 하기에는 한계가 있기 때문에
 `logback-spring.xml`을 사용하여 로그를 관리하는 것이 더 좋습니다.
 
-## Logback 설정 요소
-
-`logback-spring.xml`을 설정하기 전에 먼저 `Logback`의 설정 요소가 어떻게 이루어져 있는지 알아보겠습니다.
-
-### Logger - 어떻게 기록할까?
-
-실제 로깅을 수행하는 구성요소 입니다.
-
-> `Error` > `Warn` > `Info` > `Debug` > `Trace`
->
-> 예를 들어 `Info` 레벨로 설정 시, `Debug`, `Trace` 레벨은 출력 되지 않습니다.
-
-### Appender - 어디에 기록할까?
-
-로그 메세지가 출력 될 대상을 결정합니다.
-
-`Logger`는 `Appender`에게 로그 이벤트를 `위임`합니다
-
-- `ConsoleAppender`: 콘솔에 출력
-- `FileAppender`: 파일에 출력
-- `RollingFileAppender`: 파일을 일정 조건에 맞게 따로 저장
-
-외에도 로그를 `메일로 보내는 Appender` 등 더 있지만, 
-주로 사용 될 Appender는 위의 3개이므로 이외에 Appender는 필요시 찾아서 적용하면 될 것 같습니다.
-
-### Encoder(Layout) - 어떻게 출력할까?
-
-로그 이벤트를 바이트 배열로 변환하고 해당 바이트 배열을 `OutPutStream에 쓰는 작업을 담당`합니다.
-
-즉, `Appender`에 포함되며 `사용자가 지정한 형식으로 로그를 변환`하는 역할을 합니다.
-
 ## logback-spring.xml 설정
 
-- `src/main/resources`하위에 `logback-spring.xml`으로 파일을 생성합니다.
+`src/main/resources`하위에 `logback-spring.xml`으로 파일을 생성합니다. 그러면 `Spring Boot`가 자동으로 설정을 읽어 적용합니다.
 
-> 여기서 파일 위치와 이름은 정해져있는 것이기 떄문에 다르게 사용하면 안됩니다.
+> 여기서 파일 위치와 이름은 정해져있는 것이기 때문에 다르게 사용하면 안됩니다.
 
-### configuration
-
-`configuration` 태그 내부에 모든 기능을 정의합니다.
+- `logback-spring.xml`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!--  로깅 기능 추가  -->
+    <property name="LOG_PATTERN"
+              value="[%d{yyyy-MM-dd HH:mm:ss}:%-4relative] %green([%thread]) %highlight(%-5level) %boldWhite([%C.%M:%yellow([%L])) - %msg%n"/>
+
+    <springProfile name="prod">
+        <include resource="console-appender.xml"/>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!prod">
+        <include resource="file-info-appender.xml"/>
+
+        <root level="INFO">
+            <appender-ref ref="FILE_INFO"/>
+        </root>
+    </springProfile>
 </configuration>
+```
+
+- `console-appender.xml`
+
+```xml
+
+<included>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+</included>
+```
+
+- `file-info-appender.xml`
+
+```xml
+
+<included>
+    <appender name="FILE_INFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>./logs/info.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>./backup/info/info-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+</included>
 ```
 
 ## 참고 사이트
